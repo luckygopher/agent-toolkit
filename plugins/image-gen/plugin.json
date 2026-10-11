@@ -1,0 +1,31 @@
+{
+  "$schema": "https://agent-toolkit.org/schemas/1.0.0/plugin.schema.json",
+  "name": "image-gen",
+  "version": "0.1.0",
+  "description": "Generate and edit images using your own OpenAI-compatible API endpoint, key, and model.",
+  "author": {
+    "name": "luckygopher",
+    "url": "https://github.com/luckygopher"
+  },
+  "repository": "https://github.com/luckygopher/agent-toolkit",
+  "license": "GPL-3.0-only",
+  "keywords": ["images", "image-generation", "image-editing", "bring-your-own-key"],
+  "extensions": {
+    "com.openai": {
+      "onboardingSkill": "./skills/image-gen/SKILL.md",
+      "interface": {
+        "displayName": "Image Gen",
+        "shortDescription": "使用自己的 API 生成与编辑图片",
+        "longDescription": "在本机直接调用用户配置的图片 API。支持文生图、多参考图编辑、透明蒙版编辑和多张图片输出。无需 MCP 服务或后台进程。",
+        "developerName": "luckygopher",
+        "category": "Creativity",
+        "capabilities": ["Read", "Write"],
+        "defaultPrompt": [
+          "帮我配置 Image Gen，复用我现有的 Codex API 地址和 API Key，图片模型单独选择。",
+          "生成一张鹈鹕骑自行车的插画，并直接显示图片。",
+          "编辑我提供的图片，更换背景并保留主体。"
+        ]
+      }
+    }
+  }
+}

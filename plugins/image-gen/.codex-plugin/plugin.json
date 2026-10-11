@@ -1,0 +1,20 @@
+{
+  "name": "image-gen",
+  "version": "0.1.0",
+  "description": "Generate and edit images with your own API provider. No MCP server required.",
+  "author": {
+    "name": "luckygopher",
+    "url": "https://github.com/luckygopher"
+  },
+  "repository": "https://github.com/luckygopher/agent-toolkit",
+  "license": "GPL-3.0-only",
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Image Gen",
+    "shortDescription": "使用自己的 API 生成与编辑图片",
+    "developerName": "luckygopher",
+    "category": "Creativity",
+    "capabilities": ["Read", "Write"],
+    "defaultPrompt": ["生成一张鹈鹕骑自行车的插画，并直接显示图片。"]
+  }
+}
