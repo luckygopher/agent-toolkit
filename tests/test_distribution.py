@@ -162,6 +162,15 @@ class Distribution(unittest.TestCase):
         self.assertNotEqual(result.returncode, 0)
         self.assertNotIn('"runtime": "native"', result.stdout)
 
+    def test_maintainer_cli_outputs_utf8_on_legacy_windows_encoding(self):
+        environment = {**os.environ, "PYTHONIOENCODING": "ascii:strict"}
+        for script in ("build_plugins.py", "install_skill.py"):
+            result = subprocess.run([sys.executable, str(ROOT / "scripts" / script), "--help"],
+                                    env=environment, capture_output=True, encoding="utf-8", timeout=15)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertNotIn("UnicodeEncodeError", result.stderr)
+            self.assertIn("安装" if script == "install_skill.py" else "打包", result.stdout)
+
     def test_skill_cannot_be_installed_over_its_source(self):
         with self.assertRaises(ValueError):
             install(self.root, "image-gen", self.root / "skills", overwrite=True)

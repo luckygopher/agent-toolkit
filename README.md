@@ -26,7 +26,7 @@
 
 ## 只安装 skill
 
-skill 不依赖插件系统。可以下载独立 skill ZIP，解压后将整个 `image-gen/` 文件夹放到客户端的技能目录，例如 `~/.agents/skills/`。ZIP 同样含完整运行程序，无需安装语言环境。
+skill 不依赖插件系统。可以从 [Image Gen 发布页](https://github.com/luckygopher/agent-toolkit/releases/tag/image-gen-v0.3.0) 下载独立 skill ZIP，解压后将整个 `image-gen/` 文件夹放到客户端的技能目录，例如 `~/.agents/skills/`。ZIP 同样含完整运行程序，无需安装语言环境。
 
 从 GitHub 源码直接安装 `skills/image-gen/` 也可以：首次启动时，薄启动脚本下载同项目固定版本、校验 SHA-256 的运行程序，后续直接使用本地文件；不自动安装语言环境或编译代码。
 

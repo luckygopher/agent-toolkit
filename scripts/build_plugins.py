@@ -16,6 +16,8 @@ import tempfile
 import zipfile
 from pathlib import Path
 
+from console import configure_console
+
 from build_native import prepare_runtime, package_standalone
 from distribution_files import ignore_files
 
@@ -125,6 +127,7 @@ def build(root: Path, plugins: list[str] | None = None, *, native: bool = True, 
 
 
 def main() -> int:
+    configure_console()
     cli = argparse.ArgumentParser(description="将 plugins/ 的声明与 skills/ 的共享源码打包为独立插件。")
     cli.add_argument("--plugin", action="append", help="仅构建指定插件，可重复；默认构建全部")
     cli.add_argument("--host-only", action="store_true", help="开发测试仅构建本机平台；分发默认构建全部六个平台")
