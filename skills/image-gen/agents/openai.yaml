@@ -1,0 +1,7 @@
+interface:
+  display_name: "Image Gen"
+  short_description: "使用自己的图片 API 地址、密钥和模型，在聊天中生成或编辑图片"
+  default_prompt: "使用 $image-gen 生成一张鹈鹕骑自行车的插画，并直接显示图片。"
+
+policy:
+  allow_implicit_invocation: true

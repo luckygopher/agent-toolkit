@@ -1,0 +1,7 @@
+{
+  "base_url": "https://aipai.vip/v1",
+  "api_key": "REPLACE_LOCALLY_DO_NOT_COMMIT",
+  "model": "gpt-image-2",
+  "size": "1024x1024",
+  "timeout": 300
+}
