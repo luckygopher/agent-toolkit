@@ -38,7 +38,13 @@ class Distribution(unittest.TestCase):
         manifest = json.loads((package / "plugin.json").read_text(encoding="utf-8"))
         onboarding = manifest["extensions"]["com.openai"]["onboardingSkill"]
         self.assertTrue((package / onboarding).is_file())
-        with zipfile.ZipFile(self.root / "dist/archives/image-gen-0.1.0.zip") as archive:
+        self.assertEqual(manifest["$schema"], "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json")
+        interface = manifest["extensions"]["com.openai"]["interface"]
+        for name in ("logo", "composerIcon"):
+            self.assertTrue((package / interface[name]).is_file())
+        self.assertTrue((package / "skills/image-gen/assets/setup.html").is_file())
+        self.assertTrue((package / "skills/image-gen/scripts/setup_ui.py").is_file())
+        with zipfile.ZipFile(self.root / "dist/archives/image-gen-0.2.0.zip") as archive:
             self.assertIn(script, archive.namelist())
             self.assertIn("plugin.json", archive.namelist())
             self.assertNotIn("skills.json", archive.namelist())

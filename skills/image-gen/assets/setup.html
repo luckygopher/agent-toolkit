@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>配置 Image Gen · Agent Toolkit</title>
+  <style>
+    :root{color-scheme:light;--paper:#f5f6f3;--ink:#172c2a;--muted:#63746e;--line:#dce3dc;--accent:#256c59;--soft:#eaf3ec}
+    *{box-sizing:border-box}body{margin:0;background:var(--paper);color:var(--ink);font-family:Inter,-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;font-size:14px;line-height:1.6}
+    button,input,select{font:inherit}button{cursor:pointer}button:disabled{cursor:wait;opacity:.55}button:focus-visible,input:focus-visible,select:focus-visible,summary:focus-visible{outline:3px solid #8bc4ab;outline-offset:3px}
+    .shell{max-width:1080px;margin:0 auto;padding:32px 40px 46px}.brand{display:flex;gap:10px;align-items:center;font-weight:650;letter-spacing:-.3px}.brand svg{width:30px;height:30px}.brand span{color:var(--muted);font-weight:400;font-size:12px;margin-left:6px}
+    .layout{display:grid;grid-template-columns:1fr 1.45fr;gap:64px;margin-top:64px;align-items:start}.intro{padding-top:28px}.eyebrow{color:var(--accent);font-size:11px;letter-spacing:2px;font-weight:700}h1{font-size:39px;line-height:1.3;font-weight:600;letter-spacing:-1.6px;margin:17px 0}.lede{color:var(--muted);font-size:15px;max-width:300px;margin:0}
+    .steps{list-style:none;padding:0;margin:35px 0;display:grid;gap:17px}.steps li{display:flex;gap:12px;align-items:center;color:var(--muted)}.step{width:23px;height:23px;display:inline-grid;place-items:center;border:1px solid #cbd8cb;border-radius:50%;font-size:11px;color:var(--accent);flex:none}.note{font-size:12px;color:var(--muted);padding-top:24px;border-top:1px solid var(--line);max-width:290px}
+    .card{padding:31px;background:#fff;border:1px solid var(--line);border-radius:16px;box-shadow:0 12px 44px #1b493009}.card-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:23px}.card h2{font-size:18px;margin:0;font-weight:600}.local{background:var(--soft);color:var(--accent);border-radius:20px;padding:4px 10px;font-size:11px;white-space:nowrap}.local::before{content:"";display:inline-block;width:5px;height:5px;border-radius:50%;background:#4e9975;margin-right:6px;vertical-align:2px}
+    .import{width:100%;border:1px solid var(--line);border-radius:8px;background:#fafbf9;color:var(--ink);padding:11px 16px;font-weight:550}.import:hover{background:var(--soft)}.import small{display:block;color:var(--muted);font-size:11px;font-weight:400;margin-top:2px}.divider{display:flex;gap:12px;align-items:center;margin:22px 0;color:#8b9890;font-size:11px}.divider::before,.divider::after{content:"";height:1px;background:#e8ece7;flex:1}
+    .field{margin-bottom:19px}label{display:block;font-weight:550;margin-bottom:6px;font-size:12px}.optional{font-weight:400;color:var(--muted)}input,select{width:100%;min-width:0;color:var(--ink);background:white;border:1px solid #d5ded5;border-radius:7px;padding:11px 12px;height:43px}input::placeholder{color:#9ca69f}input:focus,select:focus{border-color:#4b9276}.hint{font-size:11px;margin:5px 0 0;color:var(--muted)}.key-row{display:flex;position:relative}.key-row input{padding-right:58px}.reveal{position:absolute;right:4px;top:4px;background:none;border:none;border-radius:4px;color:var(--muted);font-size:11px;height:35px;padding:0 9px}.reveal:hover{background:var(--paper)}
+    details{border-top:1px solid #e8ece7;padding-top:15px;margin-top:4px}summary{cursor:pointer;font-size:12px;color:var(--muted);margin-bottom:16px}.advanced{display:grid;grid-template-columns:1fr 1fr;gap:14px}.advanced .field{margin:0 0 16px}.wide{grid-column:1/-1}.confirm{display:flex;gap:9px;align-items:start;font-size:12px;font-weight:400;margin:18px 0}.confirm input{width:15px;height:15px;flex:none;margin:3px 0 0;accent-color:var(--accent)}
+    .message{padding:11px 13px;border-radius:7px;margin:14px 0;font-size:12px;background:#fff4eb;color:#8f4b25}.message.success{background:var(--soft);color:var(--accent)}[hidden]{display:none!important}.actions{display:flex;gap:12px;margin-top:21px}.save{flex:1;background:var(--accent);border:1px solid var(--accent);border-radius:8px;padding:12px 15px;color:white;font-weight:550}.save:hover{background:#1c5747}.cancel{background:white;border:1px solid var(--line);border-radius:8px;padding:12px 17px;color:var(--muted)}.foot{font-size:10px;color:#839088;text-align:center;margin:13px 0 0}.footer{margin-top:40px;font-size:11px;color:#8b9890}
+    @media(max-width:760px){.shell{padding:23px 20px}.layout{grid-template-columns:1fr;gap:25px;margin-top:22px}.intro{padding-top:8px}h1{font-size:30px;margin:10px 0}.lede{max-width:none}.steps,.note{display:none}.card{padding:23px}.brand span{display:none}.footer{margin-top:22px}}
+  </style>
+</head>
+<body>
+<main class="shell">
+  <div class="brand"><svg viewBox="0 0 32 32" fill="none" aria-hidden="true"><rect width="32" height="32" rx="9" fill="#256c59"/><path d="m8 23 6-16h4l6 16m-13-5h10" stroke="#fff" stroke-width="2.4" stroke-linejoin="round"/></svg>Agent Toolkit <span>YOUR TOOLS, YOUR WAY</span></div>
+  <div class="layout">
+    <section class="intro"><div class="eyebrow">IMAGE GEN / SETUP</div><h1>连接你的<br>图片生成服务。</h1><p class="lede">使用自己的 API，让灵感在聊天中变成图片。</p><ol class="steps"><li><span class="step">1</span>导入已有连接，或填写服务地址</li><li><span class="step">2</span>选择你要使用的图片模型</li><li><span class="step">3</span>保存配置，回到聊天开始创作</li></ol><p class="note">生图配置单独保存。<br>你的 Codex 聊天设置不会改变。</p></section>
+    <section class="card" aria-labelledby="form-title"><div class="card-head"><h2 id="form-title">配置 Image Gen</h2><span class="local">仅保存在本机</span></div>
+      <button type="button" class="import" id="import">从 Codex 导入连接<small>读取现有 API 地址与密钥，图片模型单独设置</small></button>
+      <div class="divider">或手动填写</div>
+      <form id="form">
+        <div class="field"><label for="base">API 地址</label><input id="base" name="base_url" type="url" placeholder="https://api.example.com/v1" required spellcheck="false" autocomplete="off"><p class="hint">填写图片服务的 API 地址，一般以 /v1 结尾。</p></div>
+        <div class="field"><label for="key">API Key</label><div class="key-row"><input id="key" name="api_key" type="password" placeholder="输入你的 API Key" spellcheck="false" autocomplete="off"><button class="reveal" type="button" id="reveal" aria-label="显示新输入的 API Key" aria-pressed="false">显示</button></div><p class="hint" id="key-hint">密钥不经过聊天记录，也不会发送给项目维护者。</p></div>
+        <div class="field"><label for="model">图片模型</label><input id="model" name="model" value="gpt-image-2" placeholder="例如 gpt-image-2" required spellcheck="false" autocomplete="off"><p class="hint">填写服务支持的图片模型，与聊天模型独立。</p></div>
+        <details><summary>更多设置 <span class="optional">· 尺寸、超时与输出目录</span></summary><div class="advanced"><div class="field"><label for="size">默认尺寸</label><input id="size" name="size" value="1024x1024" placeholder="1024x1024" required></div><div class="field"><label for="timeout">请求超时（秒）</label><input id="timeout" name="timeout" type="number" min="10" max="1800" step="1" value="300" required></div><div class="field wide"><label for="output">默认图片目录</label><input id="output" name="output_dir" autocomplete="off" placeholder="留空使用默认目录"></div></div></details>
+        <label class="confirm" id="overwrite-row" hidden><input type="checkbox" id="overwrite">我确认替换已有的生图配置，聊天配置保持不变。</label>
+        <div class="message" id="message" role="status" aria-live="polite" hidden></div>
+        <div class="actions"><button type="submit" class="save" id="save" disabled>保存配置</button><button type="button" class="cancel" id="cancel">取消</button></div>
+        <p class="foot">保存仅更新本机设置，不会发起生图请求或产生费用。</p>
+      </form>
+    </section>
+  </div>
+  <footer class="footer">Image Gen · Agent Toolkit</footer>
+</main>
+<script nonce="__NONCE__">
+const $ = id => document.getElementById(id);
+const token = location.pathname.split('/')[2];
+let saved = false;
+function notice(text, success = false) { $('message').textContent = text; $('message').className = 'message' + (success ? ' success' : ''); $('message').hidden = false; }
+function busy(value) { ['save','import','cancel'].forEach(id => $(id).disabled = value || saved); $('form').setAttribute('aria-busy', String(value)); }
+async function request(route, payload) {
+  const response = await fetch(location.pathname + route, { method: payload ? 'POST' : 'GET', headers: payload ? { 'Content-Type': 'application/json', 'X-Setup-Token': token } : {}, body: payload ? JSON.stringify(payload) : undefined, cache: 'no-store' });
+  const result = await response.json();
+  if (!response.ok) throw new Error(result.error || '操作未完成，请重试。');
+  return result;
+}
+function keyHint(present, imported = false) {
+  $('key').required = !present;
+  $('key').placeholder = present ? (imported ? '已导入密钥，留空使用' : '已有密钥，留空保留') : '输入你的 API Key';
+  $('key-hint').textContent = present ? '已有密钥不会显示在页面中；如需更换，请输入新的密钥。' : '密钥不经过聊天记录，也不会发送给项目维护者。';
+}
+$('reveal').onclick = () => { const show = $('key').type === 'password'; $('key').type = show ? 'text' : 'password'; $('reveal').textContent = show ? '隐藏' : '显示'; $('reveal').setAttribute('aria-pressed', String(show)); };
+$('import').onclick = async () => { busy(true); try { const value = await request('import', {}); $('base').value = value.base_url; $('key').value = ''; keyHint(true, true); notice('已导入连接。选择图片模型后，点击保存即可。', true); } catch (error) { notice(error.message); } finally { busy(false); } };
+$('form').onsubmit = async event => {
+  event.preventDefault(); busy(true);
+  try {
+    const payload = { base_url: $('base').value.trim(), api_key: $('key').value, model: $('model').value.trim(), size: $('size').value.trim(), timeout: Number($('timeout').value), output_dir: $('output').value.trim(), overwrite: $('overwrite').checked };
+    const result = await request('save', payload); saved = true; $('key').value = ''; $('save').textContent = '已保存 ✓';
+    notice(result.message + (result.environment_overrides.length ? ' 仍有环境变量覆盖，请按需同步调整。' : '') + ' 此页面可以关闭。', true);
+  } catch (error) { notice(error.message); } finally { busy(false); }
+};
+$('cancel').onclick = async () => { busy(true); try { await request('close', {}); saved = true; notice('已关闭配置，没有保存修改。', true); } catch (error) { notice(error.message); } finally { busy(false); } };
+(async () => { try { const state = await request('state'); $('base').value = state.base_url; $('model').value = state.model; $('size').value = state.size; $('timeout').value = state.timeout; $('output').value = state.output_dir; $('overwrite-row').hidden = !state.existing_configuration; keyHint(state.api_key_configured); if (state.environment_overrides.length) notice('当前存在环境变量覆盖。保存到本机后，环境变量仍然优先生效。'); busy(false); } catch (error) { notice('无法读取配置：' + error.message); } })();
+</script>
+</body>
+</html>

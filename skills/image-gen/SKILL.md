@@ -14,6 +14,18 @@ Resolve `scripts/image_gen.py` relative to **this SKILL.md**, using the actual i
 
 ## Configuration and setup
 
+For plugin Setup, a first-time setup request, or a request for visual configuration, start:
+
+```bash
+python3 <SCRIPT> setup --no-open
+```
+
+This prints a `setup_url` and keeps a temporary configuration process running. Open that exact URL in a visible browser or Codex browser panel. Keep the process alive while the user completes the form; do not wait for it to exit before opening the page. If no browser tool is available, give the user a clickable URL. The page lets the user enter their API address/key/model, or explicitly click to import the Codex address/key. The key is entered locally, never in chat. Saving, cancelling, or expiry stops the process; there is no permanent service or MCP dependency. Use `--timeout` to adjust the 600-second lifetime when needed.
+
+Do not inspect, fill, screenshot, or print a real API key. For setup verification use dummy values and a temporary `IMAGE_GEN_CONFIG_PATH`. The page never returns an existing or imported key to the browser. When setup is complete, report only the saved state or run `status` for non-secret settings.
+
+If visual setup is unavailable or the user prefers the terminal, use the options below.
+
 Run `python3 <SCRIPT> status` to inspect settings. This reads local configuration without making an API request and never displays the key.
 
 The image service has independent settings. Never edit Codex's `config.toml` or `auth.json` to configure Image Gen, and never substitute a ChatGPT access token for an API key.
