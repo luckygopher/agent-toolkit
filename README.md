@@ -2,7 +2,7 @@
 
 可独立使用的 AI skills，以及按需安装的插件。一个仓库，一份 skill 源码，两种安装方式。
 
-首个组件是 **Image Gen**：使用自己的 API 地址、API Key 和图片模型，生成或编辑图片。支持 AiPai 等兼容 OpenAI 图片接口的服务。只需要 Python 3.11+，无需安装第三方 Python 包、MCP 服务或后台进程。
+首个组件是 **Image Gen**：使用自己的 API 地址、API Key 和图片模型，生成或编辑图片。支持 AiPai 等兼容 OpenAI 图片接口的服务。只需要 Python 3.11+，无需安装第三方 Python 包、MCP 服务或常驻后台进程。
 
 ## 目录与引用关系
 
@@ -67,13 +67,27 @@ codex plugin add image-gen@agent-toolkit
 
 - `dist/plugins/image-gen/`：自包含插件，包含它引用的 skill 和脚本。
 - `dist/.agents/plugins/marketplace.json`：只列出本次构建插件的安装目录。
-- `dist/archives/image-gen-0.1.0.zip`：单个插件的分发压缩包。
+- `dist/archives/image-gen-0.2.0.zip`：单个插件的分发压缩包。
 
 不需要再执行 skill 安装命令。同一个客户端中通常选择一种安装方式即可，避免重复出现同名技能。
 
 当前 `main` 分支保存源码，`dist/` 不入库。因此直接添加 GitHub 仓库作为插件源不会自动执行构建；首版请使用上述 clone → 构建 → 添加本地 `dist` 的方式。GitHub 源直装和官方公开目录上架属于后续分发工作。
 
 ## 首次配置图片服务
+
+### 推荐：可视化配置
+
+安装插件后点击 **Setup**，让助手打开本机配置页面；独立 skill 也可以说“打开 Image Gen 可视化配置”。无需在聊天中输入 API Key。
+
+也可以在仓库根目录运行：
+
+```bash
+python3 skills/image-gen/scripts/image_gen.py setup
+```
+
+页面可以手动填写 API 地址、Key、图片模型和默认尺寸，也可点击“从 Codex 导入连接”。导入后需要点击保存才会写入独立图片配置，已有配置需要勾选替换确认。已有或导入的密钥不会显示在网页中。
+
+这是一个只监听本机的临时配置页面。保存或取消后自动退出，默认十分钟到期；无需常驻服务或 MCP。仅配置不会调用图片 API。若浏览器未自动打开，使用终端输出的页面链接；`--no-open` 可仅输出链接。远程执行环境中的 localhost 属于远端机器，本版可视化配置须在用户自己的本机执行。
 
 插件和独立 skill 使用同一套**独立图片配置**。图片地址、密钥和模型不会覆盖 Codex 的聊天设置。
 

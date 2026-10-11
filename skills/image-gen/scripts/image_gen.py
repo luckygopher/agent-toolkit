@@ -167,6 +167,47 @@ def codex_credentials() -> tuple[str, str]:
     return normalize_base_url(base), key.strip()
 
 
+def save_config(cfg: dict, *, overwrite: bool = False) -> dict:
+    """Validate and atomically save image settings, never host chat settings."""
+    path = config_path()
+    if path.exists() and not overwrite:
+        raise ImageGenError("图片配置已存在。若确实需要替换，请使用 --overwrite；现有配置没有修改。")
+    values = {key: value for key, value in cfg.items() if key in ENV_FIELDS}
+    values["base_url"] = normalize_base_url(values.get("base_url", ""))
+    key = values.get("api_key")
+    if not isinstance(key, str) or not key.strip() or any(c in key for c in "\r\n"):
+        raise ImageGenError("API Key 不能为空且不能包含换行。")
+    values["api_key"] = key.strip()
+    model = values.get("model", DEFAULT_MODEL)
+    if not isinstance(model, str) or not model.strip():
+        raise ImageGenError("图片模型不能为空。")
+    values["model"] = model.strip()
+    size = values.get("size", "1024x1024")
+    if not isinstance(size, str):
+        raise ImageGenError("图片尺寸必须是字符串。")
+    values["size"] = resolve_size(size, values["model"])
+    try:
+        timeout = int(values.get("timeout", 300))
+    except (TypeError, ValueError) as exc:
+        raise ImageGenError("超时必须是整数秒。") from exc
+    if not 10 <= timeout <= 1800:
+        raise ImageGenError("超时必须在 10–1800 秒之间。")
+    values["timeout"] = timeout
+    if "output_dir" in values:
+        if not isinstance(values["output_dir"], str) or not values["output_dir"].strip():
+            raise ImageGenError("图片输出目录不能为空。")
+    path.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
+    fd, temporary = tempfile.mkstemp(prefix=".image-gen-", dir=path.parent)
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as stream:
+            json.dump(values, stream, ensure_ascii=False, indent=2)
+            stream.write("\n")
+        os.replace(temporary, path)
+    finally:
+        Path(temporary).unlink(missing_ok=True)
+    return values
+
+
 def configure(args: argparse.Namespace) -> dict:
     path = config_path()
     if path.exists() and not args.overwrite:
@@ -185,16 +226,7 @@ def configure(args: argparse.Namespace) -> dict:
     if not model.strip():
         raise ImageGenError("图片模型不能为空。")
     cfg = {"base_url": base, "api_key": key, "model": model.strip(), "size": "1024x1024", "timeout": 300}
-    path.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
-    # Write a private file, then atomically replace the destination.
-    fd, temporary = tempfile.mkstemp(prefix=".image-gen-", dir=path.parent)
-    try:
-        with os.fdopen(fd, "w", encoding="utf-8") as stream:
-            json.dump(cfg, stream, ensure_ascii=False, indent=2)
-            stream.write("\n")
-        os.replace(temporary, path)
-    finally:
-        Path(temporary).unlink(missing_ok=True)
+    save_config(cfg, overwrite=args.overwrite)
     return {
         "configured": True,
         "config_path": str(path),
@@ -449,6 +481,9 @@ def parser() -> argparse.ArgumentParser:
     cli = argparse.ArgumentParser(description="Image Gen：使用独立 API 配置生成或编辑图片，不修改 Codex 配置。")
     commands = cli.add_subparsers(dest="command", required=True)
     commands.add_parser("status", help="显示脱敏配置；不发起网络请求")
+    visual = commands.add_parser("setup", help="打开本机可视化配置页面，保存后自动退出")
+    visual.add_argument("--no-open", action="store_true", help="只输出页面地址，不自动打开浏览器")
+    visual.add_argument("--timeout", type=int, default=600, help="页面有效秒数，默认 600，范围 10–3600")
     setup = commands.add_parser("configure", help="在本机保存独立图片配置；不发起网络请求")
     setup.add_argument("--from-codex", action="store_true", help="显式复制 Codex 的 API 地址和 API Key，不复制聊天模型")
     setup.add_argument("--model", help="图片模型，默认 gpt-image-2")
@@ -474,6 +509,10 @@ def parser() -> argparse.ArgumentParser:
 def main() -> int:
     args = parser().parse_args()
     try:
+        if args.command == "setup":
+            sys.modules.setdefault("image_gen", sys.modules[__name__])
+            from setup_ui import run_setup
+            return run_setup(open_browser=not args.no_open, timeout=args.timeout)
         result = status() if args.command == "status" else configure(args) if args.command == "configure" else generate(args)
         print(json.dumps(result, ensure_ascii=False, indent=2))
         return 1 if result.get("status") in {"partial", "error"} else 0
