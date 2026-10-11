@@ -1,220 +1,137 @@
 # Agent Toolkit
 
-可独立使用的 AI skills，以及按需安装的插件。一个仓库，一份 skill 源码，两种安装方式。
+可独立使用的 AI skills，以及按需安装的插件。skill 源码只维护一份，插件按声明引用并打包。
 
-首个组件是 **Image Gen**：使用自己的 API 地址、API Key 和图片模型，生成或编辑图片。支持 AiPai 等兼容 OpenAI 图片接口的服务。只需要 Python 3.11+，无需安装第三方 Python 包、MCP 服务或常驻后台进程。
+**用户体验：安装 → 配置 → 直接使用。无需安装 Python、Node 或 Go。**
 
-## 目录与引用关系
+首个组件 **Image Gen** 支持用户自己的 API 地址、API Key 和图片模型，兼容 OpenAI 图片接口的服务（包括相应的 AiPai 接口）。文生图、参考图编辑、蒙版编辑和多张图片输出均在本机执行。
 
-```text
-agent-toolkit/
-├── skills/
-│   └── image-gen/                # 独立 skill 的唯一源码
-│       ├── SKILL.md
-│       ├── agents/openai.yaml
-│       └── scripts/image_gen.py
-├── plugins/
-│   └── image-gen/
-│       ├── plugin.json           # 插件元数据
-│       └── skills.json           # 引用共享 skill：{"skills": ["image-gen"]}
-├── scripts/
-│   ├── install_skill.py          # 仅安装指定 skill
-│   └── build_plugins.py          # 按引用生成独立插件包
-├── tests/                        # 本地模拟接口与安装/打包测试
-└── dist/                         # 构建产物，不提交到源码仓库
+## 安装插件
+
+在 Codex/Work 桌面端的“添加插件市场”中填写：
+
+| 输入框 | 内容 |
+| --- | --- |
+| 来源 | `luckygopher/agent-toolkit` |
+| Git 引用 | `marketplace` |
+| 稀疏路径 | 留空 |
+
+市场中的插件指向已经构建好的 `marketplace` 分支，不需要用户 clone 后手动构建。找到 **Image Gen** 并安装，安装包自带六个平台的运行程序：macOS、Linux、Windows，各含 arm64 和 amd64。
+
+本机开发或试用构建包也可把 `dist/` 的绝对路径作为市场来源。
+
+安装后点击 **Setup**，填写或导入图片 API 地址、Key、模型，保存后直接在聊天中说：
+
+> 使用 Image Gen 生成一张鹈鹕骑自行车的插画，并直接展示。
+
+## 只安装 skill
+
+skill 不依赖插件系统。可以下载独立 skill ZIP，解压后将整个 `image-gen/` 文件夹放到客户端的技能目录，例如 `~/.agents/skills/`。ZIP 同样含完整运行程序，无需安装语言环境。
+
+从 GitHub 源码直接安装 `skills/image-gen/` 也可以：首次启动时，薄启动脚本下载同项目固定版本、校验 SHA-256 的运行程序，后续直接使用本地文件；不自动安装语言环境或编译代码。
+
+同一客户端通常选择插件或独立 skill 其中一种方式，避免重复出现同名技能。
+
+## 可视化配置
+
+安装后使用 Setup，或对助手说“打开 Image Gen 可视化配置”。也可直接执行启动器：
+
+```sh
+# macOS / Linux：路径以实际安装位置为准
+sh /absolute/image-gen/scripts/run.sh setup
 ```
 
-`skills/` 不依赖 `plugins/`。插件通过 `skills.json` 引用 skill；构建时将被引用的 skill 收入安装包。源码不重复维护，安装后的插件不需要访问这个仓库或另装 skill。
-
-## 获取项目
-
-```bash
-git clone https://github.com/luckygopher/agent-toolkit.git
-cd agent-toolkit
+```powershell
+# Windows：系统自带 Windows PowerShell 即可，不要求 PowerShell 7
+powershell.exe -NoProfile -File C:\absolute\image-gen\scripts\run.ps1 setup
 ```
 
-以下命令使用 `python3`。Windows 可换成 `py -3.11` 或已安装的更新版本 Python。
+Windows 若有策略禁止运行脚本，可直接运行包内对应 CPU 的 `bin/image-gen-windows-*.exe`，无需修改执行策略。
 
-## 方式一：只安装 skill
+页面支持手动填写、从 Codex 导入连接、默认尺寸、超时与输出目录。已有密钥不会回显到浏览器，替换已有配置需要明确确认。配置页面只监听本机，保存、取消或十分钟到期后退出，无常驻服务或 MCP。
 
-```bash
-python3 scripts/install_skill.py image-gen
-```
-
-默认安装到 `~/.agents/skills/image-gen/`。它只复制对应 skill，不构建或安装插件，不修改 Codex 配置。若同名 skill 已存在，默认拒绝覆盖；确认需要替换后才使用 `--overwrite`。
-
-安装到其他支持本地 skills 的客户端时，可以指定其技能父目录，例如：
-
-```bash
-python3 scripts/install_skill.py image-gen --target ~/.claude/skills
-```
-
-也可以手工复制 `skills/image-gen/` 整个目录。重新加载客户端或新建聊天后，使用 `$image-gen`，或直接描述要生成/编辑的图片。
-
-## 方式二：只安装插件
-
-先构建，再将**本地构建目录**注册为插件源：
-
-```bash
-python3 scripts/build_plugins.py --plugin image-gen
-codex plugin marketplace add ./dist
-codex plugin add image-gen@agent-toolkit
-```
-
-也可以构建后在桌面端插件目录中选择 **Agent Toolkit** 来源，按需安装 **Image Gen**。根据客户端版本，可能需要刷新或重启，再新建聊天。
-
-产物位置：
-
-- `dist/plugins/image-gen/`：自包含插件，包含它引用的 skill 和脚本。
-- `dist/.agents/plugins/marketplace.json`：只列出本次构建插件的安装目录。
-- `dist/archives/image-gen-0.2.1.zip`：单个插件的分发压缩包。
-
-不需要再执行 skill 安装命令。同一个客户端中通常选择一种安装方式即可，避免重复出现同名技能。
-
-当前 `main` 分支保存源码，`dist/` 不入库。因此直接添加 GitHub 仓库作为插件源不会自动执行构建；首版请使用上述 clone → 构建 → 添加本地 `dist` 的方式。GitHub 源直装和官方公开目录上架属于后续分发工作。
-
-## 首次配置图片服务
-
-### 推荐：可视化配置
-
-安装插件后点击 **Setup**，让助手打开本机配置页面；独立 skill 也可以说“打开 Image Gen 可视化配置”。无需在聊天中输入 API Key。
-
-也可以在仓库根目录运行：
-
-```bash
-python3 skills/image-gen/scripts/image_gen.py setup
-```
-
-页面可以手动填写 API 地址、Key、图片模型和默认尺寸，也可点击“从 Codex 导入连接”。导入后需要点击保存才会写入独立图片配置，已有配置需要勾选替换确认。已有或导入的密钥不会显示在网页中。
-
-这是一个只监听本机的临时配置页面。保存或取消后自动退出，默认十分钟到期；无需常驻服务或 MCP。仅配置不会调用图片 API。若浏览器未自动打开，使用终端输出的页面链接；`--no-open` 可仅输出链接。远程执行环境中的 localhost 属于远端机器，本版可视化配置须在用户自己的本机执行。
-
-插件和独立 skill 使用同一套**独立图片配置**。图片地址、密钥和模型不会覆盖 Codex 的聊天设置。
-
-### 从已有 Codex API 配置导入
-
-在仓库根目录运行：
-
-```bash
-python3 skills/image-gen/scripts/image_gen.py configure --from-codex --model gpt-image-2
-```
-
-只读取已保存的 Codex 服务地址和 API Key，复制到图片配置；**不复制聊天模型，不修改 `config.toml` 或 `auth.json`，不发起 API 请求**。如果图片服务与聊天服务不同，请使用下面的独立配置方式。
-
-导入不读取 ChatGPT OAuth token、系统钥匙串或动态凭据，也不会推断 CLI 临时覆盖的服务设置。这些情况下需要独立配置。配置已存在时默认不会覆盖，明确替换需加 `--overwrite`。
-
-### 配置不同的图片服务
-
-在自己的本机终端运行交互配置：
-
-```bash
-python3 skills/image-gen/scripts/image_gen.py configure
-```
-
-依次填写图片 API 地址、API Key 和图片模型。密钥输入隐藏，不需要发到聊天中。
-
-配置位置：
+**既有 0.2.x 配置可直接复用，无需重新填写。** 图片配置始终独立于客户端聊天配置：
 
 - macOS/Linux：`${XDG_CONFIG_HOME:-~/.config}/agent-toolkit/image-gen.json`
 - Windows：`%APPDATA%\agent-toolkit\image-gen.json`
-- 自定义位置：环境变量 `IMAGE_GEN_CONFIG_PATH`
+- 自定义：`IMAGE_GEN_CONFIG_PATH`
 
-新建配置文件在 macOS/Linux 上使用 `0600` 权限。它是本机明文配置，不是系统钥匙串，不能提交到代码仓库。
+配置保存在用户本机；不会修改 Codex 聊天的地址、Key 或模型。导入只读取用户明确选择的 API 地址/Key，不读取 ChatGPT OAuth token。项目维护者不接收用户密钥。
 
-API 地址一般填写到 `/v1`，例如 `https://aipai.vip/v1`。如果只填域名，脚本自动补 `/v1`；有自定义路径时保留该路径。也支持把完整 `/images/generations` 或 `/images/edits` 地址规范化为共同的 API 根路径。
+## 命令与参数
 
-### 环境变量
+以下 `<IMAGE_GEN>` 指对应平台的启动器，或包内的原生程序。
 
-| 变量 | 用途 |
+```text
+<IMAGE_GEN> status
+<IMAGE_GEN> doctor
+<IMAGE_GEN> setup --no-open
+<IMAGE_GEN> configure --from-codex --model gpt-image-2
+<IMAGE_GEN> generate "图片描述" --size 1536x1024 --quality high --count 2 --output-dir /absolute/outputs
+<IMAGE_GEN> edit "只更换背景" /absolute/reference.png --output-dir /absolute/outputs
+<IMAGE_GEN> edit --prompt-file /absolute/prompt.txt --reference /absolute/reference.png --mask /absolute/mask.png
+```
+
+支持 `--model`、`--size auto|1k|2k|4k|WIDTHxHEIGHT`、`--quality`、`--count 1–4`、`--format png|jpeg|webp`、`--background`、`--output-dir`。`4k` 为 `3840x2160`。参考图支持 PNG/JPEG/WebP，编辑最多 16 张；PNG 蒙版尺寸需与第一张参考图相同。
+
+输出 JSON 包含每张图片的绝对路径和实际图片格式，skill 会据此在聊天里展示图片。不覆盖已有图片，不自动重试生图请求；部分图片保存失败会保留成功输出并返回 `partial`。
+
+## 配置优先级
+
+当前请求参数（模型、尺寸等）→ 对应环境变量 → 本机图片配置 → 默认值。
+
+| 环境变量 | 用途 |
 | --- | --- |
 | `IMAGE_GEN_BASE_URL` | 图片 API 根地址 |
 | `IMAGE_GEN_API_KEY` | 图片 API Key |
-| `IMAGE_GEN_MODEL` | 图片模型，默认 `gpt-image-2` |
-| `IMAGE_GEN_SIZE` | 默认尺寸，默认 `1024x1024` |
+| `IMAGE_GEN_MODEL` | 图片模型 |
+| `IMAGE_GEN_SIZE` | 默认尺寸 |
+| `IMAGE_GEN_TIMEOUT` | 请求超时秒数，10–1800 |
 | `IMAGE_GEN_OUTPUT_DIR` | 默认图片目录 |
-| `IMAGE_GEN_TIMEOUT` | 超时秒数，默认 300，范围 10–1800 |
-| `IMAGE_GEN_CONFIG_PATH` | 独立配置文件位置 |
+| `IMAGE_GEN_CONFIG_PATH` | 独立配置文件 |
 
-优先级：当前请求的参数（模型、尺寸、输出目录等）→ 对应环境变量 → 图片配置文件 → 默认值。环境变量只对实际继承它们的进程生效；从桌面图标启动的应用未必继承终端变量，桌面端推荐使用持久配置文件。不会自动读取项目 `.env`。
+远程 API 使用 HTTPS；本机 HTTP 服务也受支持。HTTPS 使用系统信任机制，正常用户无需额外配置证书。显式 `SSL_CERT_FILE`/`SSL_CERT_DIR` 也受支持。
 
-查看配置来源，不显示密钥，也不调用图片 API：
+`doctor` 只发起不带密钥的 HEAD 请求，不生成图片或消耗图片额度。401/404/405 可以说明传输连接可达，并不代表 Key 和模型权限已验证。受限执行环境可能仍需由助手通过执行器申请联网权限；程序不绕过客户端安全控制。
 
-```bash
-python3 skills/image-gen/scripts/image_gen.py status
+## 仓库结构
+
+```text
+agent-toolkit/
+├── skills/image-gen/           # 独立 skill、启动器和运行声明
+├── plugins/image-gen/          # 插件清单；skills.json 引用共享 skill
+├── cmd/image-gen/              # 原生程序入口
+├── internal/imagegen/          # 唯一运行实现与内嵌配置页面
+├── scripts/                    # 维护者的构建、打包辅助工具
+├── .github/workflows/          # 跨平台测试与预构建包发布
+└── dist/                       # 可直接安装的产物，不提交到 main
 ```
 
-## 生成和编辑图片
+`plugins/image-gen/skills.json` 引用根目录中的 `image-gen` skill。构建时把 skill 和运行程序收进独立插件包，不需要维护 skill 副本。编译程序、依赖下载和平台选择由维护者构建流程完成，**不由终端用户承担**。
 
-安装后可以直接在聊天中说：
+## 开发与发布（仅维护者）
 
-> 使用 Image Gen 生成一张鹈鹕骑自行车的插画，横版，图片保存到当前项目并直接展示。
+开发环境需要 Go 1.23+，构建辅助工具使用 Python 3.11+。这两项仅用于维护者构建，用户安装包不需要它们。
 
-也可以直接运行脚本：
-
-```bash
-# 文生图
-python3 skills/image-gen/scripts/image_gen.py generate "鹈鹕骑自行车的插画" --output-dir ./outputs
-
-# 横版、高质量、两张变体
-python3 skills/image-gen/scripts/image_gen.py generate "鹈鹕骑自行车的插画" --size 1536x1024 --quality high --count 2 --output-dir ./outputs
-
-# 参考图编辑
-python3 skills/image-gen/scripts/image_gen.py edit "只更换背景，保持主体" ./reference.png --output-dir ./outputs
-
-# 多参考图与透明 PNG 蒙版
-python3 skills/image-gen/scripts/image_gen.py edit "用户的修改要求" ./reference.png ./style.png --mask ./mask.png --output-dir ./outputs
-
-# 从 UTF-8 文件读取长提示词
-python3 skills/image-gen/scripts/image_gen.py edit --prompt-file ./prompt.txt --reference ./reference.png --output-dir ./outputs
-```
-
-脚本输出 JSON，包含每张图片的绝对路径、实际图片格式和可能返回的修订提示词；skill 据此在聊天里展示图片。输出使用唯一文件名，不覆盖已有图片。不指定目录时保存到 `~/Pictures/agent-toolkit/image-gen/`。
-
-支持 `--size auto|1k|2k|4k|WIDTHxHEIGHT`、`--quality`、`--count 1–4`、`--model`、`--format png|jpeg|webp`、`--background`。`4k` 对应 `3840x2160`。请求只在用户选择时发送格式和背景等可选参数，以减少兼容性问题。
-
-## 支持范围
-
-- 文生图：`POST <base_url>/images/generations`，JSON 请求。
-- 编辑：`POST <base_url>/images/edits`，multipart 请求；支持 1–16 张 PNG/JPEG/WebP 参考图和可选 PNG 蒙版。
-- 标准响应：`data[].b64_json` 或 `data[].url`；图片下载不会附带 API Key。
-- 服务需要支持指定的图片模型及相应参数；兼容聊天接口不代表兼容图片接口。
-- GPT Image 2 使用其尺寸限制；其他模型由服务校验尺寸。蒙版需与第一张参考图同尺寸；脚本能提前核对 PNG 参考图尺寸，JPEG/WebP 的蒙版尺寸由服务校验。
-- 单张输入/输出上限 32 MiB，上传总量上限 64 MiB，接口 JSON 上限 128 MiB。
-- 不自动重试生图请求，避免重复计费。部分图片下载失败时保留已保存的图片，并返回 `partial` 状态和错误信息。
-- 客户端必须能运行本地 Python 脚本并展示本机图片。本版面向 Codex CLI、Codex/Work 桌面端的本地执行环境；未提供网页或云端运行的托管服务。
-- 本项目没有默认公共服务器，不代付 API 费用，也不将用户密钥发送给仓库维护者。
-
-## 连接检查与 HTTPS
-
-在生图前可运行一个不计费的检查：
-
-```bash
-python3 skills/image-gen/scripts/image_gen.py doctor
-```
-
-它只对 `/models` 发起不带密钥的 HEAD 请求，不生成图片。返回 401/404/405 仍可能说明网络与 HTTPS 可达，不代表 API Key、图片接口或模型权限已验证。
-
-客户端保持 HTTPS 和主机名验证。若 Python 安装缺少默认证书，自动尝试现有系统 CA 文件；系统文件不可用时可使用已安装的 certifi，但它不是必需依赖，也不会被自动安装。用户指定的 `SSL_CERT_FILE` / `SSL_CERT_DIR` 会被保留。
-
-如果仅在客户端执行环境中遇到 `dns_error` 或 `network_permission_denied`，先给连接检查申请相应联网权限，成功后再在同一允许联网的环境中生成。不要把执行环境的限制误判为服务不可用，也不要通过重复生图请求排查网络。其他错误会区分证书校验、TLS 握手、超时和连接被拒绝。
-
-## 测试
-
-```bash
+```sh
+go test -race ./...
+python3 scripts/build_plugins.py --plugin image-gen --host-only
 python3 -m unittest discover -s tests -v
+# 分发版本默认构建全部六个平台
+python3 scripts/build_plugins.py --plugin image-gen
 ```
 
-测试使用临时配置、临时安装目录和本机模拟 HTTP 服务，不调用真实生图 API、不读取真实密钥、不产生生图费用。覆盖接口格式、编辑上传、凭据隔离、错误脱敏、不重试、图片下载、插件引用打包和 skill 独立安装。
+完整构建产物：
 
-## 新增组件
+- `dist/plugins/image-gen/`：自包含插件，含六个平台的原生程序。
+- `dist/archives/image-gen-0.3.0.zip`：插件 ZIP。
+- `dist/archives/image-gen-skill-0.3.0.zip`：独立 skill ZIP。
+- `dist/.agents/plugins/marketplace.json`：可直接添加的本地市场。
 
-1. 在 `skills/<name>/` 维护可独立使用的 skill 与所需资源。
-2. 如果需要插件入口，在 `plugins/<name>/` 添加 `plugin.json`、兼容清单和 `skills.json`。
-3. 在 `.agents/plugins/marketplace.json` 添加可选安装项。
-4. 更新版本号后运行 `python3 scripts/build_plugins.py`。
+测试覆盖本机模拟图片服务、HTTPS、配置隔离、Setup 安全与退出、独立安装、启动校验，以及禁止调用 Python/Node/Go 时的运行行为。测试不读取真实密钥或调用真实生图服务。
 
-一个插件可以引用多个共享 skill。同一 skill 也可以被多个插件引用。`dist/` 是生成物，不手工维护。
+发布使用同一仓库的 `marketplace` 分支保存预构建插件，并以 `image-gen-v<版本>` 固定运行文件。分发文件附带 SHA-256 和第三方许可声明。
 
 ## 许可证
 
-GPL-3.0-only。见 [LICENSE](LICENSE)。
+GPL-3.0-only，见 [LICENSE](LICENSE)。原生程序中包含的第三方组件许可见 `skills/image-gen/THIRD_PARTY_NOTICES.md`。

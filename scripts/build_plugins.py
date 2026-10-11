@@ -16,10 +16,12 @@ import tempfile
 import zipfile
 from pathlib import Path
 
+from build_native import prepare_runtime, package_standalone
+from distribution_files import ignore_files
+
 
 ROOT = Path(__file__).resolve().parents[1]
 NAME = re.compile(r"[a-z0-9][a-z0-9-]*\Z")
-IGNORED = {".git", "__pycache__", ".venv", ".DS_Store", ".env"}
 
 
 def read_json(path: Path) -> dict:
@@ -35,12 +37,10 @@ def validate_tree(path: Path) -> None:
             raise ValueError(f"Symbolic links cannot be bundled: {item}")
 
 
-def ignore_files(directory, names):
-    return [name for name in names if name in IGNORED or name.startswith(".env.") or name.endswith((".pyc", ".pyo", ".local.json"))]
-
-
-def build_plugin(root: Path, name: str) -> Path:
+def build_plugin(root: Path, name: str, *, native: bool = True, host_only: bool = False) -> Path:
     root = root.resolve()
+    if (root / "dist").is_symlink():
+        raise ValueError("Build output must not be a symbolic link.")
     if not NAME.fullmatch(name):
         raise ValueError(f"Invalid plugin name: {name}")
     source = root / "plugins" / name
@@ -64,6 +64,11 @@ def build_plugin(root: Path, name: str) -> Path:
         if skill.is_symlink() or not (skill / "SKILL.md").is_file():
             raise ValueError(f"Referenced skill is missing: {ref}")
         validate_tree(skill)
+        if native and (skill / "native-runtime.json").exists():
+            (root / "dist").mkdir(exist_ok=True)
+            prepare_runtime(root, skill, host_only=host_only)
+            version_file = skill / "scripts/runtime-version"
+            package_standalone(root, skill, version_file.read_text().strip())
         resolved.append(skill)
     output = root / "dist" / "plugins"
     if (root / "dist").is_symlink() or output.is_symlink():
@@ -110,11 +115,11 @@ def write_marketplace(root: Path, built_names: list[str]) -> None:
     destination.write_text(json.dumps({**catalog, "plugins": entries}, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
 
-def build(root: Path, plugins: list[str] | None = None) -> list[Path]:
+def build(root: Path, plugins: list[str] | None = None, *, native: bool = True, host_only: bool = False) -> list[Path]:
     names = plugins or sorted(path.parent.name for path in (root / "plugins").glob("*/plugin.json"))
     if not names:
         raise ValueError("No plugins found.")
-    packages = [build_plugin(root, name) for name in names]
+    packages = [build_plugin(root, name, native=native, host_only=host_only) for name in names]
     write_marketplace(root, names)
     return packages
 
@@ -122,9 +127,10 @@ def build(root: Path, plugins: list[str] | None = None) -> list[Path]:
 def main() -> int:
     cli = argparse.ArgumentParser(description="将 plugins/ 的声明与 skills/ 的共享源码打包为独立插件。")
     cli.add_argument("--plugin", action="append", help="仅构建指定插件，可重复；默认构建全部")
+    cli.add_argument("--host-only", action="store_true", help="开发测试仅构建本机平台；分发默认构建全部六个平台")
     args = cli.parse_args()
     try:
-        for package in build(ROOT, args.plugin):
+        for package in build(ROOT, args.plugin, host_only=args.host_only):
             print(package)
         print(f"插件源：{ROOT / 'dist'}")
         return 0

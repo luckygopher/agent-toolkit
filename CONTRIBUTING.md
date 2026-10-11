@@ -1,24 +1,26 @@
 # 贡献指南
 
-本项目使用 Python 3.11+ 标准库，不需要安装开发依赖。
+## 用户与开发环境分开
 
-## 修改原则
+用户只安装预构建插件或 skill 并配置 API，不安装语言环境。原生实现使用 Go；Python 只用于维护者打包和分发测试，不应回到用户运行链路。
 
-- skill 源码只放在 `skills/`。不要在 `plugins/` 维护技能副本。
-- `plugins/<name>/skills.json` 声明引用；构建时自动包含对应技能。
-- 保持 skill 可脱离仓库和插件系统独立使用。相对资源路径以其 `SKILL.md` 所在目录为准。
-- 用户图片配置与客户端聊天配置独立。仅在用户明确选择导入时读取 Codex 的服务地址和 API Key。
-- 不提交密钥、个人配置或生成图片，不记录 Authorization 或原始服务响应。
-- 生图调用可能产生费用；失败后不自动重试，不在测试或构建中调用真实服务。
-- 保持标准插件清单与 `.codex-plugin/plugin.json` 的名称和版本一致。
+## 源码组织
 
-## 提交前
+- `skills/` 维护独立 skill 和薄启动器。
+- `plugins/` 只声明元数据与 skill 引用，禁止手工维护副本。
+- 原生业务代码位于 `internal/imagegen/`，入口为 `cmd/image-gen/`。
+- 配置页面内嵌到可执行程序，独立 skill 不依赖仓库其他目录。
+- API 配置与聊天配置独立，不记录密钥或原始服务响应。
+- 不自动重试可能计费的请求，不在测试中使用真实账户。
 
-```bash
+## 提交前检查
+
+```sh
+go test -race ./...
+python3 scripts/build_plugins.py --plugin image-gen --host-only
 python3 -m unittest discover -s tests -v
-python3 scripts/build_plugins.py
 ```
 
-自动化测试只使用本机模拟服务与临时目录。修改接口行为、配置或分发方式时，补充能验证用户可见行为的测试。
+发布前使用默认全平台构建，并同时更新插件版本、`scripts/runtime-version` 和变更记录。源代码、原生文件和 SHA-256 对应同一发布版本。不要提交 bin/ 或 dist/ 到 main；预构建分发由 marketplace 分支管理。
 
-贡献按仓库的 GPL-3.0-only 许可证提供。
+贡献使用 GPL-3.0-only。

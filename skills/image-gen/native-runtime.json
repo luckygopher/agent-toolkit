@@ -1,0 +1,12 @@
+{
+  "command": "./cmd/image-gen",
+  "version_file": "scripts/runtime-version",
+  "platforms": [
+    "darwin/arm64",
+    "darwin/amd64",
+    "linux/arm64",
+    "linux/amd64",
+    "windows/arm64",
+    "windows/amd64"
+  ]
+}

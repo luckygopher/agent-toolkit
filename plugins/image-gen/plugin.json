@@ -1,7 +1,7 @@
 {
   "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
   "name": "image-gen",
-  "version": "0.2.1",
+  "version": "0.3.0",
   "description": "Generate and edit images using your own OpenAI-compatible API endpoint, key, and model.",
   "author": {
     "name": "luckygopher",
@@ -21,7 +21,7 @@
       "interface": {
         "displayName": "Image Gen",
         "shortDescription": "使用自己的 API 生成与编辑图片",
-        "longDescription": "在本机直接调用用户配置的图片 API。支持文生图、多参考图编辑、透明蒙版编辑和多张图片输出。无需 MCP 服务或常驻后台进程。",
+        "longDescription": "安装包内置 macOS、Windows、Linux 运行程序，无需安装 Python、Node 或 Go。配置自己的图片 API 后即可生成和编辑图片。",
         "developerName": "luckygopher",
         "category": "Creativity",
         "capabilities": [
