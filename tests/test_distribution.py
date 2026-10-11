@@ -160,6 +160,7 @@ class Distribution(unittest.TestCase):
             command = ["/bin/sh", str(destination / "scripts/run.sh"), "--version"]
         result = subprocess.run(command, capture_output=True, text=True, timeout=15)
         self.assertNotEqual(result.returncode, 0)
+        self.assertIn("Runtime verification failed", result.stderr)
         self.assertNotIn('"runtime": "native"', result.stdout)
 
     def test_maintainer_cli_outputs_utf8_on_legacy_windows_encoding(self):

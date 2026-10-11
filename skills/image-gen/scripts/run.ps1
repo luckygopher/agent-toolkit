@@ -35,7 +35,15 @@ try {
     if ($parts.Count -eq 2 -and $parts[1] -eq $runtimeName) { $expected = $parts[0]; break }
   }
   if ($expected -notmatch '^[a-fA-F0-9]{64}$') { throw 'Runtime checksum is missing. Reinstall the plugin or skill.' }
-  $actual = (Get-FileHash -LiteralPath $runtimeBinary -Algorithm SHA256).Hash
+  # .NET is built into Windows PowerShell; avoid optional module discovery.
+  $runtimeStream = [IO.File]::OpenRead($runtimeBinary)
+  $runtimeHasher = [Security.Cryptography.SHA256]::Create()
+  try {
+    $actual = ([BitConverter]::ToString($runtimeHasher.ComputeHash($runtimeStream))).Replace('-', '').ToLowerInvariant()
+  } finally {
+    $runtimeStream.Dispose()
+    $runtimeHasher.Dispose()
+  }
   if ($actual -ne $expected) { throw 'Runtime verification failed; no runtime was executed.' }
   if ($temporaryDirectory) {
     Move-Item -Force -LiteralPath $runtimeBinary -Destination (Join-Path $runtimeDirectory $runtimeName)
