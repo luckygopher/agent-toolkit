@@ -1,0 +1,32 @@
+{
+  "name": "image-gen",
+  "version": "0.3.0",
+  "description": "Generate and edit images with your own API provider. No MCP server required.",
+  "author": {
+    "name": "luckygopher",
+    "url": "https://github.com/luckygopher"
+  },
+  "repository": "https://github.com/luckygopher/agent-toolkit",
+  "license": "GPL-3.0-only",
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Image Gen",
+    "shortDescription": "使用自己的 API 生成与编辑图片",
+    "developerName": "luckygopher",
+    "category": "Creativity",
+    "capabilities": [
+      "Read",
+      "Write"
+    ],
+    "defaultPrompt": [
+      "打开 Image Gen 的可视化配置页面，设置我的图片 API 地址、Key 和模型。"
+    ],
+    "logo": "./assets/icon.svg",
+    "composerIcon": "./assets/icon.svg"
+  },
+  "extensions": {
+    "com.openai": {
+      "onboardingSkill": "./skills/image-gen/SKILL.md"
+    }
+  }
+}
