@@ -35,6 +35,12 @@ def api_service(*, mode="base64", count=1, status_code=200):
     image = png()
 
     class Handler(BaseHTTPRequestHandler):
+        def do_HEAD(self):
+            records.append((self.command, self.path, dict(self.headers), b""))
+            self.send_response(401)
+            self.send_header("Content-Length", "0")
+            self.end_headers()
+
         def do_POST(self):
             body = self.rfile.read(int(self.headers["Content-Length"]))
             records.append((self.command, self.path, dict(self.headers), body))
@@ -119,6 +125,21 @@ class ImageGenCLI(unittest.TestCase):
         self.assertEqual(records[0][2]["Authorization"], "Bearer isolated-secret-key")
         self.assertEqual(json.loads(records[0][3]), {"model": "gpt-image-2", "prompt": "鹈鹕骑自行车", "size": "1536x1024", "n": 1})
         self.assertEqual(self.config.read_bytes(), original)
+        self.assertNotIn("isolated-secret-key", completed.stdout + completed.stderr)
+
+    def test_doctor_uses_only_unauthenticated_non_billable_head(self):
+        with api_service() as (base, records):
+            self.configured(base)
+            completed = self.run_cli("doctor")
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        data = json.loads(completed.stdout)
+        self.assertTrue(data["reachable"])
+        self.assertFalse(data["credentials_sent"])
+        self.assertEqual(data["http_status"], 401)
+        self.assertEqual(len(records), 1)
+        self.assertEqual(records[0][0], "HEAD")
+        self.assertEqual(records[0][1], "/v1/models")
+        self.assertNotIn("Authorization", records[0][2])
         self.assertNotIn("isolated-secret-key", completed.stdout + completed.stderr)
 
     def test_multiple_images_have_distinct_paths(self):

@@ -11,10 +11,12 @@ import argparse
 import base64
 import binascii
 import getpass
+import http.client
 import json
 import os
 import re
 import socket
+import ssl
 import struct
 import sys
 import tempfile
@@ -31,6 +33,7 @@ MAX_RESPONSE = 128 * 1024 * 1024
 MAX_IMAGE = 32 * 1024 * 1024
 MAX_UPLOAD = 64 * 1024 * 1024
 DEFAULT_MODEL = "gpt-image-2"
+VERSION = "0.2.1"
 SIZES = {"1k": "1024x1024", "2k": "2048x2048", "4k": "3840x2160"}
 ENV_FIELDS = {
     "base_url": "IMAGE_GEN_BASE_URL",
@@ -43,7 +46,98 @@ ENV_FIELDS = {
 
 
 class ImageGenError(Exception):
-    pass
+    def __init__(self, message: str, code: str | None = None):
+        super().__init__(message)
+        self.code = code
+
+
+def tls_context() -> tuple[ssl.SSLContext, str]:
+    """Keep TLS verification enabled, including on Python installs missing CAs."""
+    try:
+        context = ssl.create_default_context()
+    except (OSError, ssl.SSLError) as exc:
+        raise ImageGenError("无法加载 HTTPS 信任配置，请检查 SSL_CERT_FILE 或 SSL_CERT_DIR。", "tls_configuration_error") from exc
+    if context.cert_store_stats().get("x509_ca", 0):
+        return context, "default"
+    paths = ssl.get_default_verify_paths()
+    if paths.capath:
+        # Hashed CA directories can load certificates lazily during verification.
+        return context, "default"
+    if os.environ.get("SSL_CERT_FILE") or os.environ.get("SSL_CERT_DIR"):
+        raise ImageGenError("指定的 HTTPS 证书库不可用，请检查 SSL_CERT_FILE 或 SSL_CERT_DIR。", "tls_configuration_error")
+    candidates = [
+        ("system_bundle", "/etc/ssl/cert.pem"),
+        ("system_bundle", "/etc/ssl/certs/ca-certificates.crt"),
+        ("system_bundle", "/etc/pki/tls/certs/ca-bundle.crt"),
+        ("system_bundle", "/etc/pki/ca-trust/extracted/pem/tls-ca-bundle.pem"),
+    ]
+    try:
+        import certifi
+        candidates.append(("certifi", certifi.where()))
+    except ImportError:
+        pass
+    for source, filename in candidates:
+        if not Path(filename).is_file():
+            continue
+        try:
+            context.load_verify_locations(cafile=filename)
+        except (OSError, ssl.SSLError):
+            continue
+        if context.cert_store_stats().get("x509_ca", 0):
+            return context, source
+    raise ImageGenError("Python 没有可用的 HTTPS 证书库。请修复 Python 的证书安装，或用 SSL_CERT_FILE 指向系统可信 CA 文件；不要关闭证书校验。", "tls_configuration_error")
+
+
+def connection_error(exc: BaseException) -> ImageGenError:
+    reason = exc.reason if isinstance(exc, urllib.error.URLError) else exc
+    if isinstance(reason, ssl.SSLCertVerificationError):
+        return ImageGenError("HTTPS 证书校验失败，请检查系统时间、代理证书或可信 CA 配置。未自动重试。", "tls_certificate_error")
+    if isinstance(reason, ssl.SSLError):
+        return ImageGenError("HTTPS 握手失败，请检查网络代理和服务的 TLS 配置。未自动重试。", "tls_handshake_error")
+    if isinstance(reason, socket.gaierror):
+        return ImageGenError("无法解析图片服务域名，可能是当前执行环境没有联网权限或 DNS 不可用。请先运行 doctor 检查连接；执行器若限制联网，应申请联网权限。未自动重试生图。", "dns_error")
+    if isinstance(reason, PermissionError):
+        return ImageGenError("当前执行环境不允许访问网络，请通过执行器申请联网权限。未自动重试生图。", "network_permission_denied")
+    if isinstance(reason, (TimeoutError, socket.timeout)):
+        return ImageGenError("请求超时。生图请求可能已受理或计费，脚本不会自动重试。", "timeout")
+    if isinstance(reason, ConnectionRefusedError):
+        return ImageGenError("服务拒绝连接，请检查服务地址、端口和代理是否运行。未自动重试。", "connection_refused")
+    return ImageGenError("无法连接图片服务，请运行 doctor 检查网络和 HTTPS。未自动重试生图。", "connection_error")
+
+
+class VerifiedHTTPSHandler(urllib.request.HTTPSHandler):
+    """Load CA roots only when a request actually uses HTTPS, including redirects."""
+
+    def __init__(self):
+        urllib.request.AbstractHTTPHandler.__init__(self, debuglevel=0)
+        self.certificate_source = None
+
+    def https_open(self, request):
+        context, self.certificate_source = tls_context()
+        return self.do_open(http.client.HTTPSConnection, request, context=context)
+
+
+def doctor(timeout: int = 10) -> dict:
+    """Check transport with an unauthenticated HEAD, never a generation POST."""
+    if not 1 <= timeout <= 60:
+        raise ImageGenError("连接检查超时必须在 1–60 秒之间。")
+    cfg, _ = load_config(require_credentials=False)
+    if not cfg["base_url"]:
+        raise ImageGenError("请先配置图片 API 地址。")
+    https = VerifiedHTTPSHandler()
+    request = urllib.request.Request(cfg["base_url"] + "/models", method="HEAD", headers={"User-Agent": f"agent-toolkit-image-gen/{VERSION}"})
+    try:
+        with urllib.request.build_opener(https).open(request, timeout=timeout) as response:
+            status_code = response.status
+            final_url = response.geturl()
+    except urllib.error.HTTPError as exc:
+        # 401/404/405 still prove that the server answered over this transport.
+        status_code = exc.code
+        final_url = exc.geturl()
+        exc.close()
+    except (urllib.error.URLError, TimeoutError, ssl.SSLError, OSError) as exc:
+        raise connection_error(exc) from exc
+    return {"status": "success", "reachable": True, "http_status": status_code, "tls_verified": final_url.startswith("https:"), "certificate_source": https.certificate_source or "not_required", "credentials_sent": False, "note": "只确认网络与 HTTPS 可达，不验证 API Key 或模型权限；未生成图片。"}
 
 
 def config_path() -> Path:
@@ -282,11 +376,11 @@ def post_api(cfg: dict, route: str, body: bytes, content_type: str) -> dict:
     request = urllib.request.Request(
         cfg["base_url"] + route,
         data=body,
-        headers={"Authorization": "Bearer " + cfg["api_key"], "Content-Type": content_type, "Accept": "application/json", "User-Agent": "agent-toolkit-image-gen/0.1.0"},
+        headers={"Authorization": "Bearer " + cfg["api_key"], "Content-Type": content_type, "Accept": "application/json", "User-Agent": f"agent-toolkit-image-gen/{VERSION}"},
         method="POST",
     )
     try:
-        with urllib.request.build_opener(NoRedirect()).open(request, timeout=cfg["timeout"]) as response:
+        with urllib.request.build_opener(VerifiedHTTPSHandler(), NoRedirect()).open(request, timeout=cfg["timeout"]) as response:
             raw = read_limited(response, MAX_RESPONSE)
     except urllib.error.HTTPError as exc:
         raw = exc.read(8192)
@@ -297,12 +391,8 @@ def post_api(cfg: dict, route: str, body: bytes, content_type: str) -> dict:
         except (ValueError, UnicodeError):
             message = "服务没有返回 JSON 错误详情，请检查地址、模型权限和服务状态。"
         raise ImageGenError(f"图片 API 返回 HTTP {exc.code}：{clean_error(str(message), cfg['api_key'])}") from exc
-    except (TimeoutError, socket.timeout) as exc:
-        raise ImageGenError("生图请求超时。服务可能已受理或计费，脚本不会自动重试。") from exc
-    except urllib.error.URLError as exc:
-        if isinstance(exc.reason, (TimeoutError, socket.timeout)):
-            raise ImageGenError("生图请求超时。服务可能已受理或计费，脚本不会自动重试。") from exc
-        raise ImageGenError("无法连接图片 API，请检查网络、代理、HTTPS 证书和服务地址。脚本不会自动重试。") from exc
+    except (urllib.error.URLError, TimeoutError, ssl.SSLError, OSError) as exc:
+        raise connection_error(exc) from exc
     try:
         data = json.loads(raw)
     except (ValueError, UnicodeError) as exc:
@@ -419,9 +509,9 @@ def output_bytes(item: dict, cfg: dict) -> bytes:
             raise ImageGenError("图片下载地址不是字符串。")
         validate_image_url(url)
         # Image CDN requests never receive the user's API authorization header.
-        request = urllib.request.Request(url, headers={"User-Agent": "agent-toolkit-image-gen/0.1.0"})
+        request = urllib.request.Request(url, headers={"User-Agent": f"agent-toolkit-image-gen/{VERSION}"})
         try:
-            with urllib.request.build_opener(SecureDownloadRedirect()).open(request, timeout=cfg["timeout"]) as response:
+            with urllib.request.build_opener(VerifiedHTTPSHandler(), SecureDownloadRedirect()).open(request, timeout=cfg["timeout"]) as response:
                 return read_limited(response, MAX_IMAGE)
         except (urllib.error.URLError, TimeoutError, socket.timeout) as exc:
             raise ImageGenError("图片已生成，但下载失败；脚本不会重新发起生图请求。") from exc
@@ -481,6 +571,8 @@ def parser() -> argparse.ArgumentParser:
     cli = argparse.ArgumentParser(description="Image Gen：使用独立 API 配置生成或编辑图片，不修改 Codex 配置。")
     commands = cli.add_subparsers(dest="command", required=True)
     commands.add_parser("status", help="显示脱敏配置；不发起网络请求")
+    diagnostic = commands.add_parser("doctor", help="不带密钥检查网络与 HTTPS；不会生成图片")
+    diagnostic.add_argument("--timeout", type=int, default=10, help="连接检查超时秒数，范围 1–60")
     visual = commands.add_parser("setup", help="打开本机可视化配置页面，保存后自动退出")
     visual.add_argument("--no-open", action="store_true", help="只输出页面地址，不自动打开浏览器")
     visual.add_argument("--timeout", type=int, default=600, help="页面有效秒数，默认 600，范围 10–3600")
@@ -513,13 +605,19 @@ def main() -> int:
             sys.modules.setdefault("image_gen", sys.modules[__name__])
             from setup_ui import run_setup
             return run_setup(open_browser=not args.no_open, timeout=args.timeout)
+        if args.command == "doctor":
+            print(json.dumps(doctor(args.timeout), ensure_ascii=False, indent=2))
+            return 0
         result = status() if args.command == "status" else configure(args) if args.command == "configure" else generate(args)
         print(json.dumps(result, ensure_ascii=False, indent=2))
         return 1 if result.get("status") in {"partial", "error"} else 0
     except (ImageGenError, OSError, ValueError, EOFError) as exc:
         # Never log configuration objects or raw service responses.
         key = os.environ.get("IMAGE_GEN_API_KEY", "")
-        print(json.dumps({"status": "error", "message": clean_error(str(exc), key)}, ensure_ascii=False), file=sys.stderr)
+        result = {"status": "error", "message": clean_error(str(exc), key)}
+        if isinstance(exc, ImageGenError) and exc.code:
+            result["code"] = exc.code
+        print(json.dumps(result, ensure_ascii=False), file=sys.stderr)
         return 1
     except KeyboardInterrupt:
         print("操作已取消。若生成请求已发出，服务仍可能完成或计费，请勿盲目重试。", file=sys.stderr)

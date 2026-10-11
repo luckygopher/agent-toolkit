@@ -67,7 +67,7 @@ codex plugin add image-gen@agent-toolkit
 
 - `dist/plugins/image-gen/`：自包含插件，包含它引用的 skill 和脚本。
 - `dist/.agents/plugins/marketplace.json`：只列出本次构建插件的安装目录。
-- `dist/archives/image-gen-0.2.0.zip`：单个插件的分发压缩包。
+- `dist/archives/image-gen-0.2.1.zip`：单个插件的分发压缩包。
 
 不需要再执行 skill 安装命令。同一个客户端中通常选择一种安装方式即可，避免重复出现同名技能。
 
@@ -183,6 +183,20 @@ python3 skills/image-gen/scripts/image_gen.py edit --prompt-file ./prompt.txt --
 - 不自动重试生图请求，避免重复计费。部分图片下载失败时保留已保存的图片，并返回 `partial` 状态和错误信息。
 - 客户端必须能运行本地 Python 脚本并展示本机图片。本版面向 Codex CLI、Codex/Work 桌面端的本地执行环境；未提供网页或云端运行的托管服务。
 - 本项目没有默认公共服务器，不代付 API 费用，也不将用户密钥发送给仓库维护者。
+
+## 连接检查与 HTTPS
+
+在生图前可运行一个不计费的检查：
+
+```bash
+python3 skills/image-gen/scripts/image_gen.py doctor
+```
+
+它只对 `/models` 发起不带密钥的 HEAD 请求，不生成图片。返回 401/404/405 仍可能说明网络与 HTTPS 可达，不代表 API Key、图片接口或模型权限已验证。
+
+客户端保持 HTTPS 和主机名验证。若 Python 安装缺少默认证书，自动尝试现有系统 CA 文件；系统文件不可用时可使用已安装的 certifi，但它不是必需依赖，也不会被自动安装。用户指定的 `SSL_CERT_FILE` / `SSL_CERT_DIR` 会被保留。
+
+如果仅在客户端执行环境中遇到 `dns_error` 或 `network_permission_denied`，先给连接检查申请相应联网权限，成功后再在同一允许联网的环境中生成。不要把执行环境的限制误判为服务不可用，也不要通过重复生图请求排查网络。其他错误会区分证书校验、TLS 握手、超时和连接被拒绝。
 
 ## 测试
 

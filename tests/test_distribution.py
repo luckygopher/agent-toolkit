@@ -44,7 +44,7 @@ class Distribution(unittest.TestCase):
             self.assertTrue((package / interface[name]).is_file())
         self.assertTrue((package / "skills/image-gen/assets/setup.html").is_file())
         self.assertTrue((package / "skills/image-gen/scripts/setup_ui.py").is_file())
-        with zipfile.ZipFile(self.root / "dist/archives/image-gen-0.2.0.zip") as archive:
+        with zipfile.ZipFile(self.root / "dist/archives/image-gen-0.2.1.zip") as archive:
             self.assertIn(script, archive.namelist())
             self.assertIn("plugin.json", archive.namelist())
             self.assertNotIn("skills.json", archive.namelist())

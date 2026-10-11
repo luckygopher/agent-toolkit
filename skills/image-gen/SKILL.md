@@ -44,6 +44,12 @@ An installed plugin does not automatically expose host credentials to a script. 
 
 ## Generate or edit
 
+Before the first image request in a chat, run `python3 <SCRIPT> doctor` in the execution environment that will run the image request. This sends only an unauthenticated HEAD request; it does not generate images or spend image credits. A 401/404/405 response can still mean transport is reachable; it does not validate the API key, image endpoint, or model access.
+
+If `doctor` reports `dns_error` or `network_permission_denied` and the executor restricts outbound networking, request the executor's network access (for example `sandbox_permissions: require_escalated`) and rerun **doctor** in that allowed environment. Then run the user's authorized generation there. Do not rerun a generation merely to diagnose connectivity, and do not treat a sandbox DNS failure as proof that the user's service is down. If approval is denied, report the restriction and its stated reason.
+
+HTTPS verification stays enabled. The client uses Python's configured trust store, or an existing system CA bundle when the Python installation has no default CAs. If the user explicitly sets `SSL_CERT_FILE` or `SSL_CERT_DIR`, preserve that choice. Never disable certificate or hostname verification.
+
 Collect the user's prompt and preserve exact text, requested style, size, model, and constraints. A reference image used for editing must be a real local PNG, JPEG, or WebP file. For a local file used as a style reference, explain its role in the prompt; the edit endpoint accepts both reference-driven generation and edits. Do not fabricate missing references.
 
 Choose an absolute output directory inside the current task/project when available (usually its `outputs` directory). Do not put deliverables in the installed plugin's cache. The script's fallback is `~/Pictures/agent-toolkit/image-gen`.
