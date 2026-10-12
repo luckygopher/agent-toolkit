@@ -7,8 +7,10 @@
     {
       "name": "image-gen",
       "source": {
-        "source": "local",
-        "path": "./dist/plugins/image-gen"
+        "source": "git-subdir",
+        "url": "https://github.com/luckygopher/agent-toolkit.git",
+        "ref": "marketplace",
+        "path": "./plugins/image-gen"
       },
       "interface": {
         "displayName": "Image Gen",

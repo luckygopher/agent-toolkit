@@ -8,3 +8,4 @@ __pycache__/
 outputs/
 dist/
 *.local.json
+/skills/*/bin/

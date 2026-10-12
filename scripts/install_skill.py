@@ -14,6 +14,8 @@ import sys
 import tempfile
 from pathlib import Path
 
+from console import configure_console
+
 from build_plugins import ignore_files, validate_tree
 
 
@@ -57,6 +59,7 @@ def install(root: Path, name: str, target: Path, overwrite: bool = False) -> Pat
 
 
 def main() -> int:
+    configure_console()
     cli = argparse.ArgumentParser(description="独立安装 skill，不安装插件，不修改 Codex 的聊天配置。")
     cli.add_argument("skill", help="例如 image-gen")
     cli.add_argument("--target", type=Path, default=Path.home() / ".agents/skills", help="技能父目录，默认 ~/.agents/skills")
